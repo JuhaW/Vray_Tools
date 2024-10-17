@@ -38,11 +38,10 @@ class Nodetree_OT_type_change(bpy.types.Operator):
 		print("active object:",o.name)	
 		# object has node tree ?
 		#nt = hasattr(o.data, "node_tree")		
-		
 		#nt_type = o.data.node_tree.type
 		# set Node Editor node tree type
-		wm = context.window_manager
-		wm.vrayTreeType = self.next_nodetree_type(wm.vrayTreeType) # "SHADER", "WORLD", "OBJECT"
+		editor_type = context.scene.vray.ActiveNodeEditorType
+		context.scene.vray.ActiveNodeEditorType = self.next_nodetree_type(editor_type) # "SHADER", "WORLD", "OBJECT"
 		# update node editor
 		context.area.tag_redraw()
 		context.area.ui_type = 'VRayNodeTreeEditor'
