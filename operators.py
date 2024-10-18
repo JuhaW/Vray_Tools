@@ -10,8 +10,22 @@ import inspect
 
 
 #===================================
-#
+# CAUSTICS
 #===================================
+class Vray_Caustics_OT_Nodes(bpy.types.Operator):
+	
+	bl_idname = "vray.set_caustics"
+	bl_label = "Set material caustics"
+	bl_description = "Set material caustics"
+	bl_options = {'REGISTER', 'UNDO'}
+
+
+	def execute(self, context):
+		context.active_node.inputs['Affect Shadows'].value = False
+		context.active_node.inputs['Affect Alpha'].value = "2"
+		context.scene.vray.SettingsCaustics.on = True
+		
+		return {'FINISHED'}
 
 
 #===================================

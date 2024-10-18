@@ -23,6 +23,8 @@ from . import show_image_textures as ImgTex
 from . import operators as Op
 from . import panels as P
 from . import clouds as SunClouds
+from . import caustics 
+
 import importlib.util
 #        10        20        30        40        50        60        70        80        90        100
 #234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -134,6 +136,7 @@ def register():
 	F.register_classes(Op)
 	F.register_classes(P)
 	F.register_classes(SunClouds)
+	F.register_classes(caustics)
 	
 	# Sun clouds presets
 	bpy.types.VRAY_PT_context_lamp.append(SunClouds.panel_func)
@@ -148,6 +151,7 @@ def register():
 
 def unregister():
 
+	F.unregister_classes(caustics)
 	F.unregister_classes(Op)
 	F.unregister_classes(ImgTex)
 	F.unregister_classes(P)
