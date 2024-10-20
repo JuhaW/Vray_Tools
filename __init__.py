@@ -14,7 +14,7 @@ bl_info = {
 
 import bpy
 from bpy.utils import register_classes_factory
-from bpy.props import BoolProperty, PointerProperty, CollectionProperty
+from bpy.props import BoolProperty, PointerProperty, CollectionProperty, StringProperty
 import sys
 import inspect
 from . import functions as F
@@ -23,7 +23,8 @@ from . import show_image_textures as ImgTex
 from . import operators as Op
 from . import panels as P
 from . import clouds as SunClouds
-from . import caustics 
+from . import caustics
+from . import lights 
 
 import importlib.util
 #        10        20        30        40        50        60        70        80        90        100
@@ -47,15 +48,35 @@ def keymap(mode = "init"):
 				km.keymap_items.remove(kmi)
 			addon_keymaps.clear()
 
+	
+def update_lights(self, context):
+	
+	print("Lights changed", self.on, self.light_type)	
+	
+	#prevents error if light type is not set
+	if not self.light_type:
+		return
+	
+	for i in lights.LIGHTS[self.light_type]["objects"]:
+		o = bpy.data.objects[i] 
+		o.hide_set(not self.on)
+		o.hide_viewport = not self.on
+		o.hide_render = not self.on
+		
+
 
 class Shadow_Catch(bpy.types.PropertyGroup):
 	obj: PointerProperty(type=bpy.types.Object)
 
+class Lights_on(bpy.types.PropertyGroup):
+	on 			: BoolProperty(default = True, update=update_lights,description="If ON, set lights on. If OFF, set lights off")
+	light_type	: StringProperty()
 
 class Addon_variables(bpy.types.PropertyGroup):
 
-	shadow_catcher_objects : CollectionProperty(type=Shadow_Catch)
-	show_texture_all_objects : BoolProperty(default = True, description="If ON, set image textures to all objects. If OFF, set only selected objects image textures")
+	shadow_catcher_objects 		: CollectionProperty(type=Shadow_Catch)
+	show_texture_all_objects 	: BoolProperty(default = True, description="If ON, set image textures to all objects. If OFF, set only selected objects image textures")
+	lights 		: CollectionProperty(type=Lights_on)
 
 class Vray_Tools_PT_Panel(bpy.types.Panel):
 	"""Creates a Panel in the Object properties window"""
@@ -138,6 +159,7 @@ def register():
 	F.register_classes(SunClouds)
 	F.register_classes(caustics)
 	
+	
 	# Sun clouds presets
 	bpy.types.VRAY_PT_context_lamp.append(SunClouds.panel_func)
 	SunClouds.Vray_Clouds_attr_get()
@@ -145,12 +167,14 @@ def register():
 	F.register_classes(__package__) #this __init__.py file
 	bpy.types.Scene.addon = bpy.props.PointerProperty(type=Addon_variables)
 	
+	F.register_classes(lights)
 
 	keymap(mode="init")
 
 
 def unregister():
 
+	F.unregister_classes(lights)
 	F.unregister_classes(caustics)
 	F.unregister_classes(Op)
 	F.unregister_classes(ImgTex)
