@@ -7,6 +7,11 @@ from . import operators as Op
 
 SHADOW_CATCHER_OBJECT_TYPES = ('MESH', 'CURVE','SURFACE','META','FONT')
 
+def object_hide_viewport_and_render(o, true_false: bool):
+	o.hide_viewport = not true_false
+	o.hide_render = not true_false
+
+
 def get_object_materials(o):
 	return list(OrderedDict.fromkeys(o.data.materials))
 	#return list(set(filter(None, o.data.materials)))

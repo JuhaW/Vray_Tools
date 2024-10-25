@@ -14,7 +14,9 @@ bl_info = {
 
 import bpy
 from bpy.utils import register_classes_factory
-from bpy.props import BoolProperty, PointerProperty, CollectionProperty, StringProperty
+from bpy.props import BoolProperty, PointerProperty, CollectionProperty, StringProperty, FloatProperty
+#from bpy.props import Shader
+from bpy.app.handlers import persistent
 import sys
 import inspect
 from . import functions as F
@@ -48,7 +50,8 @@ def keymap(mode = "init"):
 				km.keymap_items.remove(kmi)
 			addon_keymaps.clear()
 
-	
+
+
 def update_lights(self, context):
 	
 	print("Lights changed", self.on, self.light_type)	
@@ -59,24 +62,29 @@ def update_lights(self, context):
 	
 	for i in lights.LIGHTS[self.light_type]["objects"]:
 		o = bpy.data.objects[i] 
-		o.hide_set(not self.on)
-		o.hide_viewport = not self.on
-		o.hide_render = not self.on
+		# if light object is "visibility locked" do nothing
+		if not o.get("visibility_lock", False):
+			F.object_hide_viewport_and_render(o, self.on)
+	
+		#o.hide_viewport = not self.on
+		#o.hide_render = not self.on
 		
 
 
 class Shadow_Catch(bpy.types.PropertyGroup):
-	obj: PointerProperty(type=bpy.types.Object)
+	obj			: PointerProperty(type=bpy.types.Object)
 
 class Lights_on(bpy.types.PropertyGroup):
-	on 			: BoolProperty(default = True, update=update_lights,description="If ON, set lights on. If OFF, set lights off")
+	on 			: BoolProperty(default = True, update=update_lights, description="Set lights on/off from both viewport and render")
 	light_type	: StringProperty()
+	
 
 class Addon_variables(bpy.types.PropertyGroup):
 
 	shadow_catcher_objects 		: CollectionProperty(type=Shadow_Catch)
 	show_texture_all_objects 	: BoolProperty(default = True, description="If ON, set image textures to all objects. If OFF, set only selected objects image textures")
 	lights 		: CollectionProperty(type=Lights_on)
+
 
 class Vray_Tools_PT_Panel(bpy.types.Panel):
 	"""Creates a Panel in the Object properties window"""
@@ -149,10 +157,16 @@ class Vray_Shadow_Catcher_PT_Panel(bpy.types.Panel):
 #module_file = "C:/Blender addons/addons/Vray_Tools/delete_blender_nodes.py"
 
 
-def register():
-	
+@persistent
+def lights_init():
+	print("*"*40)
+	print("lights_init")
+	print("*"*40)
+	lights.Lights_refresh()
 	
 
+def register():
+	
 	F.register_classes(ImgTex)
 	F.register_classes(Op)
 	F.register_classes(P)
@@ -169,28 +183,36 @@ def register():
 	
 	F.register_classes(lights)
 
+	#init lights, this needs to be done before scene update, otherwise errors
+	bpy.app.timers.register(lights_init, first_interval=0.1)
+
+	# add timer for checking light objects, one by one, 1 second between checks
+	bpy.app.timers.register(lights.lights_timer1, first_interval=0.1, persistent=True)
+
+
 	keymap(mode="init")
 
 
 def unregister():
 
+	bpy.app.timers.unregister(lights.lights_timer1)
+	#Sun clouds presets
+	print("Removing Sun Clouds Presets")
+	#bpy.types.VRAY_PT_context_lamp.remove(SunClouds.panel_func)
+
 	F.unregister_classes(lights)
 	F.unregister_classes(caustics)
 	F.unregister_classes(Op)
 	F.unregister_classes(ImgTex)
-	F.unregister_classes(P)
 	F.unregister_classes(SunClouds)
+	F.unregister_classes(P)
 	F.unregister_classes(__package__)
-
-	print("Removing Sun Clouds Presets")
-	print(bpy.types.VRAY_PT_context_lamp)
-	#Sun clouds presets
-	bpy.types.VRAY_PT_context_lamp.remove(SunClouds.panel_func)
+	
 	del bpy.types.Scene.addon
 	
 	keymap(mode="remove")
 	
-		
+
 if __name__ == '__main__':
 	register()
 
