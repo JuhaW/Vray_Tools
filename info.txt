@@ -1,0 +1,25 @@
+
+collection
+===========
+hide				#true/false
+panel_open		#true/false
+lock 				#true/false, indicator
+
+
+Light object
+============
+visibility_lock	#true/false
+lock					#true/false
+
+#solo mode
+solo 							#bool
+solo_stored_visibility	#bool, when one of the objects is solo mode
+								#this stores objects visibility
+								#so when solo mode is off, objects visibility
+								#can be restored
+
+
+
+Operator
+========
+solo_ui						#bool, Collection_OT_Hide.

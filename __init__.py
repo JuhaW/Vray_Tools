@@ -27,6 +27,7 @@ from . import panels as P
 from . import clouds as SunClouds
 from . import caustics
 from . import lights 
+from . import icons #VRAY_ICONS as global variable
 
 import importlib.util
 #        10        20        30        40        50        60        70        80        90        100
@@ -85,6 +86,7 @@ class Addon_variables(bpy.types.PropertyGroup):
 	show_texture_all_objects 	: BoolProperty(default = True, description="If ON, set image textures to all objects. If OFF, set only selected objects image textures")
 	lights 		: CollectionProperty(type=Lights_on)
 
+	Light_solo_mode = BoolProperty(default = False) #When one of the collection light object clicked as solo, this will be True
 
 class Vray_Tools_PT_Panel(bpy.types.Panel):
 	"""Creates a Panel in the Object properties window"""
@@ -159,10 +161,10 @@ class Vray_Shadow_Catcher_PT_Panel(bpy.types.Panel):
 
 @persistent
 def lights_init():
-	print("*"*40)
+
 	print("lights_init")
-	print("*"*40)
 	lights.Lights_refresh()
+	return None
 	
 
 def register():
@@ -184,18 +186,20 @@ def register():
 	F.register_classes(lights)
 
 	#init lights, this needs to be done before scene update, otherwise errors
-	bpy.app.timers.register(lights_init, first_interval=0.1)
+	bpy.app.timers.register(lights_init, first_interval=0.5)
 
 	# add timer for checking light objects, one by one, 1 second between checks
-	bpy.app.timers.register(lights.lights_timer1, first_interval=0.1, persistent=True)
+	#bpy.app.timers.register(lights.lights_timer1, first_interval=0.1, persistent=True)
 
 
 	keymap(mode="init")
+	icons.load_VRay_icons()
+	icons.load_Custom_icons()
 
 
 def unregister():
 
-	bpy.app.timers.unregister(lights.lights_timer1)
+	#bpy.app.timers.unregister(lights_init)
 	#Sun clouds presets
 	print("Removing Sun Clouds Presets")
 	#bpy.types.VRAY_PT_context_lamp.remove(SunClouds.panel_func)
@@ -211,6 +215,8 @@ def unregister():
 	del bpy.types.Scene.addon
 	
 	keymap(mode="remove")
+	icons.unload_VRay_icons()
+	icons.unload_Custom_icons()
 	
 
 if __name__ == '__main__':

@@ -2,12 +2,16 @@ import bpy
 from . __init__ import Vray_Tools_PT_Panel #VRAYLIGHTS_PT_Panel
 from . import functions as F
 from bpy.app.handlers import persistent
+from . import icons #VRAY_ICONS
+
 LIGHTS = {}
 
 LIGHT_CNT_TIMER = 0
 LIGHT_DELAY_TIMER = 0.1
 LIGHT_BATCH_SIZE_TIMER = 20
-
+LIGHT_ICONS = {"DOME": "LIGHT_HEMI","SUN": "LIGHT_SUN","RECT": "LIGHT_AREA",
+					"SPHERE": "LIGHT_POINT","SPOT": "LIGHT_SPOT","MESH": "MESH_MONKEY"}
+PREFIX = ""
 
 #			10        20        30        40        50        60        70        80        90        100	
 #2345678901234567890123456789012345678901234567890123456789012345678901234567890
@@ -143,6 +147,10 @@ def select(obj_name, invert=False):
 
 	bpy.context.view_layer.objects.active = o
 
+
+#============================================
+#PANEL
+#============================================
 class Vray_Lights_PT_Panel(bpy.types.Panel):
 	
 	bl_parent_id = "VRAYTOOLS_PT_Panel"
@@ -153,70 +161,183 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 
 
 	def draw(self, context):
+
+
+
+		def light_type():
+
+			def invisible(light):
+				gf.scale_x = 1
+				gf.prop(light, "invisible",emboss=False, text="",icon="RESTRICT_RENDER_ON" if light.invisible else "RESTRICT_RENDER_OFF")
+
+
+			gf.emboss = "NORMAL"
+			light_type = o.data.vray.light_type
+			od = o.data.vray
+			match light_type:
+				case "DOME":
+					if o.data.node_tree:
+						gf.scale_x = .2
+						gf.prop(o, "tag",text=" ",emboss=False,icon="BLANK1")
+						dome_node = F.node_dome_find(o.data.node_tree.nodes)
+						if dome_node:
+							intensity = dome_node.inputs['Intensity']
+							gf.scale_x = .5
+							gf.prop(intensity, "value", text="")
+							invisible = dome_node.inputs['Invisible']
+							gf.scale_x = 1
+							gf.prop(invisible, "value", text="",emboss=False,icon="RESTRICT_RENDER_ON" if invisible.value else "RESTRICT_RENDER_OFF")
+						else:
+							gf.scale_x = 3
+							gf.prop(o, "tag",text="",icon="BLANK1", emboss=False)
+							gf.scale_x = 3
+							gf.prop(o, "tag",text="",icon="BLANK1", emboss=False)
+					else:
+						gf.scale_x = .2
+						gf.prop(od.LightDome, "color_colortex", text="")
+						gf.scale_x = .5
+						gf.prop(od.LightDome, "intensity", text="")
+						invisible(od.LightDome)
+				case "SUN":
+					gf.scale_x = .2
+					gf.prop(od.SunLight, "filter_color", text="")
+					gf.scale_x = .5
+					gf.prop(od.SunLight, "intensity_multiplier", text="")
+					invisible(od.SunLight)
+				case "RECT":
+					gf.scale_x = .2
+					gf.prop(od.LightRectangle, "color_colortex", text="")
+					gf.scale_x = .5
+					gf.prop(od.LightRectangle, "intensity", text="")
+					invisible(od.LightRectangle)
+				case "SPHERE":
+					gf.scale_x = .2
+					gf.prop(od.LightSphere, "color_colortex", text="")
+					gf.scale_x = .5
+					gf.prop(od.LightSphere, "intensity", text="")
+					invisible(od.LightSphere)
+				case "SPOT":
+					gf.scale_x = .2
+					gf.prop(od.LightSpot, "color_colortex", text="")
+					gf.scale_x = .5
+					gf.prop(od.LightSpot, "intensity", text="")
+					gf.scale_x = 1
+					gf.prop(o, "tag", text="",emboss=False, icon="BLANK1")
+				case "MESH":
+					gf.scale_x = .2
+					gf.prop(od.LightMesh, "color_colortex", text="")
+					gf.scale_x = .5
+					gf.prop(od.LightMesh, "intensity", text="")
+					invisible(od.LightMesh)
 		layout = self.layout
 		row = layout.row(align=False)
 		row.operator("lights.refresh", icon="FILE_REFRESH")
 		row.alignment='RIGHT'
-		row.prop(context.scene.vray.SettingsGI, "on",text="", icon="IPO_BOUNCE")
-		#draw_panel(self, context, light_type="SUN")
+		#GI 
+		row.prop(context.scene.vray.SettingsGI, "on",text="", icon="MOD_SOFT")
 
 		#row = layout.row()
 		#row.alignment = 'EXPAND'
 		row = layout.row(align=True)
-		row.operator("add.lights", icon="ADD")
+		#row.operator("add.lights", icon="ADD")
 
-		test = False
-		if not test:
-			return
-		#1
-		#cf = layout.column_flow(columns=6, align=True)
-		cf = layout.grid_flow(columns=6, align=True)
-		cf.alignment = 'LEFT'
-		#split = layout.split(factor=0.08, align=True)
-		#col1 = split.column(align=True)
-		cf.alert = True
-		cf.label(text="", icon='FILE_FOLDER')
-		#2
-		#split = split.split(factor=0.08)
-		#col2 = split.column()
-		cf.alert = False
-		cf.label(text="", icon='FILE_FOLDER')
-		#3
-		#split = row.split(factor=0.08)
-		#col3 = split.column()
-		#col3.alert = True
-		cf.label(text="", icon='FILE_FOLDER')
-		#4
-		#split = split.split(factor=0.4)
-		#col4 = split.column(align=True)
-		cf.operator("splitter.splatter", text="Cancel")
-		#5
-		#split = split.split(factor=0.8)
-		#col5 = split.column(align=True)
-		#col5.alignment = 'RIGHT'
-		cf.operator("splitter.splatter", text="Ok")
-		#6
-		#split = split.split()
-		#col6 = split.column()
-		#col6.alignment = 'RIGHT'
-		
-		cf.prop(context.scene.vray.SettingsGI, "on",text="")
+#============================================
+#COLLECTIONS
+		#show if collection is visible or hidden
+		#row = layout.row(align=True)
+		colls = get_collections_which_have_light_objects()
+		for coll in colls:
+			cf = layout.box()
+			#cf = layout.grid_flow(columns=4, align=True)
+			cf = cf.grid_flow(columns=4, align=True)
+			#custom panel open/closed
+			#row = row.column(align=True)
+			#emboss False makes arrow not hightlighted
+			cf.prop(coll,'["panel_open"]',text="", emboss = True, icon = "TRIA_DOWN" if coll["panel_open"] else "TRIA_RIGHT")
+			#collection lock indicator
+			if coll.get("lock",False):
+				cf.alert = True
+			#p = cf.operator("collection.hide_show", text="", icon_value=icons.CUSTOM_ICONS["SOLO"].icon_id)
+			p = cf.operator("collection.hide_show", text="", icon="HIDE_ON" if coll["hide"] else "HIDE_OFF")
+			p.coll_name = coll.name
+			p.invert_hide = False
+			cf.alert = False
+			#select lights
+			p = cf.operator("collection.select_lights", text="", icon="RESTRICT_SELECT_OFF")
+			p.coll_name = coll.name
+			#collection name
+			if coll['panel_open']:
+				cf.emboss = "NORMAL"
+			else:
+				cf.emboss = "PULLDOWN_MENU"
+			cf.label(text = coll.name)
+			
+			#row = layout.row(align=True)	
+			
+#============================================
+#LIGHTS
+			#panel is open
+			#use grid flow
+			if coll["panel_open"]:
+				light_objs = get_collection_light_objects(coll)
+				cf = layout.box()
+				for o in light_objs:
+					#gf = layout.grid_flow(columns=5, align=True)
+					
+					row = cf.row()
+					gf = row.grid_flow(columns=7, align=True)
+					gf.separator(factor=1)
+					#light type icon
+					l_type = o.data.vray.light_type
+					gf.scale_x = 1 #!1.5
+					
+					if l_type in ["SUN", "DOME", "RECT", "SPHERE","SPOT", "MESH" ]:
+						gf.label(text="", icon_value=icons.VRAY_ICONS[l_type].icon_id)
+					else:
+						gf.label(text="", icon=LIGHT_ICONS[l_type])
+					
+					#gf = row.grid_flow(columns=5, align=True)
+					#gf = layout.column_flow(columns=5,align = False)
+					#split = row.column(align=True)
+					#check if any light of this collection is locked, set object lock
+					#set also collection lock indicator locked = red 
+					if o.get("lock", False):
+						gf.alert = True
+					gf.scale_x = 1 #!1.2
+					#if Collection_OT_Hide.solo_ui:
+					if o.hide_viewport:
+						gf.active = False
+					if o.get("solo", False):
+						gf.active = True
+						r = gf.operator("lights.hide",text="", icon_value=icons.CUSTOM_ICONS["SOLO"].icon_id)
+					else:
+						r = gf.operator("lights.hide",text="", icon="HIDE_ON" if o.hide_viewport else "HIDE_OFF")
+					r.obj_name = o.name
+					r.coll_name = coll.name #store collection
 
-		"""
-		row = row.row(align=True)
-		row.scale_x = 0.3
-		row.operator("splitter.splatter", text="My Button")
-		#4
-		row = row.row(align=True)
-		row.scale_x = 0.7
-		row.operator("splitter.splatter", text="My Button")
-		#5
-		row = row.row(align=True)
-		#row.scale_x = 1
-		row.alignment = 'RIGHT'
-		row.prop(context.scene.vray.SettingsGI,"on", text="")
-		"""
-		#row.operator("splitter.splatter")
+					#light object selection
+					#no red colors here anymore
+					gf.alert = False
+					gf.scale_x = .6
+					if o.select_get():
+
+						gf.emboss = 'NORMAL'
+					else:
+
+						gf.emboss = 'NONE'
+					gf.operator("object.select_object", text=o.name).obj_name = o.name
+					
+					gf.alignment = "EXPAND"
+					#Light color
+					light_type()
+					#row = layout.row(align=True)
+					#gf.label(text="",icon="OBJECT_DATA")
+					#gf.label(text="",icon="OBJECT_DATA")
+					
+					
+#============================================
+#
+#============================================					
 
 class Copythis_PT_Panel():
 	#bl_parent_id = "VRAYLIGHTS_PT_Panel"
@@ -230,8 +351,8 @@ class Copythis_PT_Panel():
 	
 	
 	def draw(self, context):
-		if LIGHTS:
-			draw_panel(self, context, self.bl_label)
+		pass
+		#draw_panel(self, context, self.bl_label)
 		
 	def draw_header(self, context):
 		layout = self.layout
@@ -241,8 +362,8 @@ class Copythis_PT_Panel():
 		row.label(text="", icon=self.icon)
 		#row = layout.split(factor=0.3)
 
-		#show if light type is on or off
-		#row = layout.split(factor=0.5)
+
+		"""
 		row.prop(context.scene.addon.lights[self.idx], "on", text="", icon = "HIDE_OFF" if context.scene.addon.lights[self.idx].on else "HIDE_ON")
 		
 		#select lights by light type
@@ -264,38 +385,8 @@ class Copythis_PT_Panel():
 		row = col.row()
 		cnt = str(LIGHTS[self.bl_label]["count"])
 		row.label(text=cnt)  ##f"{1:3d}"
+		"""
 
-
-class Dome_PT_Panel(Copythis_PT_Panel, bpy.types.Panel):
-	bl_idname = "DOME_PT_Panel"
-	bl_label = "DOME" 
-	icon = "LIGHT_HEMI"
-	idx = 0
-
-class Sun_PT_Panel(Copythis_PT_Panel, bpy.types.Panel):
-	bl_idname = "SUN_PT_Panel"
-	bl_label = "SUN"
-	icon = "LIGHT_SUN"
-	idx = 1
-
-
-class Rect_PT_Panel(Copythis_PT_Panel, bpy.types.Panel):
-	bl_idname = "RECT_PT_Panel"
-	bl_label = "RECT"
-	icon = "LIGHT_AREA"
-	idx = 2
-
-class Sphere_PT_Panel(Copythis_PT_Panel, bpy.types.Panel):
-	bl_idname = "SPHERE_PT_Panel"
-	bl_label = "SPHERE"
-	icon = "LIGHT_POINT"
-	idx = 3
-
-class Spot_PT_Panel(Copythis_PT_Panel, bpy.types.Panel):
-	bl_idname = "SPOT_PT_Panel"
-	bl_label = "SPOT"
-	icon = "LIGHT_SPOT"
-	idx = 4
 
 class Select_OT_Object(bpy.types.Operator):
 	
@@ -304,20 +395,20 @@ class Select_OT_Object(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}	# enable undo for the operator.
 	bl_description = 	("Select light and unselect all other objects.\n"
 						"Shift+Click to select and add to selection")
-	obj : bpy.props.StringProperty()
+	obj_name : bpy.props.StringProperty()
 	deselect_all = True
 
 	def execute(self, context):
 
-		print(self.obj)
-		select(self.obj)
+		print(self.obj_name)
+		select(self.obj_name)
 		
 		return {'FINISHED'}
 
 	def invoke(self, context, event):
 
 		if event.shift and event.type =='LEFTMOUSE':  #invert light object selection
-			select(self.obj, invert=True)
+			select(self.obj_name, invert=True)
 			return {'FINISHED'}
 		
 		return self.execute(context)
@@ -368,9 +459,27 @@ def lights_refresh_from_timer(o):
 def Lights_refresh():
 
 	print("Lights_refresh")
-	global LIGHTS
-	context = bpy.context
+	colls = get_collections_which_have_light_objects()
+	for coll in colls:
+		#set hide/show
+		coll["hide"] = False
+		#set panel open/closed
+		coll["panel_open"] = False
+		#set object view locked/unlocked
+		coll["lock"] = False
+	
+	for coll in colls:
+		for o in coll.objects:
+			o["solo"] = False
 
+	#solo indicator for poll
+	Collection_OT_Hide.solo_ui = False
+	return None
+
+
+	#context = bpy.context
+	
+	"""
 	def node_dome_find(nodes):
 		for i in nodes:
 			if i.vray_plugin == "LightDome":
@@ -417,6 +526,7 @@ def Lights_refresh():
 			l = context.scene.addon.lights.add()
 			l.on = True
 			l.light_type = i
+	"""
 
 class Lights_OT_Refresh(bpy.types.Operator):
 	
@@ -431,26 +541,39 @@ class Lights_OT_Refresh(bpy.types.Operator):
 		return {'FINISHED'}
 	
 
-class Lights_OT_Select(bpy.types.Operator):
+class Collection_OT_Select_Lights(bpy.types.Operator):
 
-	bl_idname = "lights.select"
-	bl_label = "Select all lights of this light type"
+	bl_idname = "collection.select_lights"
+	bl_label = "Select all lights of this collection"
 	bl_options = {'REGISTER', 'UNDO'}	# enable undo for the operator.
-
-	#which light type lights to select
-	light_type_idx : bpy.props.IntProperty(default = 0)
+	
+	coll_name	: bpy.props.StringProperty()
 
 	def execute(self, context):
 		
-		print("Light type selected", self.light_type_idx)
 		bpy.ops.object.select_all(action='DESELECT')
-		for o in LIGHTS[LIGHT_TYPES[self.light_type_idx]]["objects"]:
-			obj = bpy.data.objects[o]
-			obj.select_set(True)
-			bpy.context.view_layer.objects.active = obj
+		coll = get_collection_by_name(context, self.coll_name)
+		light_objs = get_collection_light_objects(coll)
+		for o in light_objs:
+			o.select_set(True)
+			bpy.context.view_layer.objects.active = o
 
 		return {'FINISHED'}
-	
+
+	def invoke(self, context, event):
+		if event.type == 'LEFTMOUSE' and event.shift:
+			coll = get_collection_by_name(context, self.coll_name)
+			light_objs = get_collection_light_objects(coll)
+			for o in light_objs:
+				o.select_set(not o.select_get())
+				bpy.context.view_layer.objects.active = o
+
+			return {'FINISHED'}
+
+		return self.execute(context)
+
+
+
 
 class Lights_OT_Hide_Show(bpy.types.Operator):
 
@@ -461,30 +584,105 @@ class Lights_OT_Hide_Show(bpy.types.Operator):
 							"Ctrl+Click to lock")
 
 	#which light to select
-	obj : bpy.props.StringProperty()
+	obj_name 			: bpy.props.StringProperty()
+	coll_name	: bpy.props.StringProperty()
 
 	def execute(self, context):
 		
-		print("Light:", self.obj)
-		o = bpy.data.objects[self.obj]
+		print("Light:", self.obj_name)
+		o = bpy.data.objects[self.obj_name]
 		F.object_hide_viewport_and_render(o, o.hide_viewport)
 		return {'FINISHED'}
 
 
 	def invoke(self, context, event):
 		print ("Invoke")
-		if event.ctrl and event.type =='LEFTMOUSE':  # Cancel
+
+		o = bpy.data.objects[self.obj_name]
+		#if solo mode is on of this object, ignore click except solo mode click (Alt)
+		#solo_mode =  o.get("solo", False)
+		solo_mode = Collection_OT_Hide.solo_ui
+		
+		if not solo_mode and event.ctrl and event.type =='LEFTMOUSE': 
 			print ("Leftclick+ ctrl")
-			o = bpy.data.objects[self.obj]
-			if not o.get("visibility_lock"):
-				o["visibility_lock"] = True
+			
+			if not o.get("lock", False):
+				o["lock"] = True
 			else:
-				o["visibility_lock"] ^= True #invert
-		else:
+				o["lock"] ^= True #invert
+			#now we need to loop every lights in this collection to set collection view locked/unlocked
+			#if one of the lights has lock on, collection will show view lock = red
+			#coll = bpy.data.collections[self.coll_name]
+			coll = get_collection_by_name(context, self.coll_name)
+			for o in coll.objects:
+				if o.get("lock", False):
+					coll["lock"] = True
+					break
+			else:
+				coll["lock"] = False
+			
+		elif event.type == 'LEFTMOUSE' and event.alt:
+			print("Leftclick+ alt")
+			self.solo(context)
+
+			#Solo_OT_Mode.execute(self, context)
+		elif not solo_mode:
 			return self.execute(context)
 		
 		return {'FINISHED'}
+	
+	def solo(self, context):
 		
+		# Toggle current light object solo mode, #.["solo"]
+		# Check if any light object is in solo mode, except the current one
+		#If no objects are in solo mode
+			#Check current light object solo mode
+			#Yes, current light is in solo mode
+				#Store all other light objects visibility, #.["solo_stored_visibility"]
+				#Hide all light objects except the current one
+			#No, current light is not in solo mode
+				#Restore light objects visibility, #.["solo_stored_visibility"]
+
+		o = bpy.data.objects[self.obj_name]
+		o["solo"] ^= True
+		#colls = get_collections_which_have_light_objects()
+		light_objs = get_all_light_objects(context)
+		
+		objs = [ obj for obj in light_objs if obj.get("solo", False) and obj != o] 
+		if objs:
+			print("Yes, other objects in solo mode")
+			if o.get("solo", False):
+				object_hide_viewport_and_render(o, False)
+			else:
+				object_hide_viewport_and_render(o, True)
+			Collection_OT_Hide.solo_ui = True
+		else:
+			print("No other objects in solo mode")
+			if o.get("solo", False):
+				#store all light objects visibility
+				for obj in light_objs:
+					obj["solo_stored_visibility"] = obj.hide_viewport
+					object_hide_viewport_and_render(obj,True)
+					
+				object_hide_viewport_and_render(o, False)
+				Collection_OT_Hide.solo_ui = True
+			else:	#restore all light objects visibility
+				for obj in light_objs:
+					obj.hide_viewport = obj["solo_stored_visibility"]
+				Collection_OT_Hide.solo_ui = False
+
+
+def object_hide_viewport_and_render(o, hide):
+	o.hide_viewport = hide
+	o.hide_render = hide
+
+def get_collection_by_name(context, name):
+	#special case when collection is scene collection
+	if name == context.scene.collection.name:
+		coll = context.scene.collection
+	else:			
+		coll = bpy.data.collections[name]
+	return coll
 
 class Lights_OT_Unlock(bpy.types.Operator):
 	
@@ -550,6 +748,108 @@ class Add_OT_Lights(bpy.types.Operator):
 			loc.y -= 1		
 		return {'FINISHED'}
 
+class Collection_OT_Hide(bpy.types.Operator):
+	bl_idname = "collection.hide_show"
+	bl_label = "Mouse Click Operator"
+
+	coll_name 		: bpy.props.StringProperty() #from panel
+	invert_hide 	: bpy.props.BoolProperty() #invert ligth object selection
+
+	solo_ui = False
+
+	@classmethod
+	def poll(cls, context):
+		return not cls.solo_ui
+
+	def execute(self, context):
+
+		#we dont use collection own hide_viewport etc. properties. because they are limited
+		#we use collection objects hide properties
+		#that way we can hide all of of collection objects at once and the same time
+		#we can use collection objects hide properties
+
+		coll = get_collection_by_name(context, self.coll_name)
+
+		#ignore view locked objects
+		objs = [o for o in coll.objects if not o.get("lock", False)]
+
+		if not self.invert_hide:
+			
+			coll["hide"] ^= True
+			value = coll["hide"]
+			for o in objs:
+				o.hide_viewport = value
+				o.hide_render = value
+		else:
+			for o in objs:
+				hide = o.hide_viewport
+				o.hide_viewport = not hide
+				o.hide_render = not hide
+
+		print ("Collection hide execute")
+		
+		return {'FINISHED'}
+	def invoke(self, context, event):
+		print(event.type, event.value)
+		
+
+		if event.type == 'LEFTMOUSE':
+			if event.alt and event.ctrl:
+				print ("Alt+Ctrl+Click, Collection hide invoke")
+				return {'FINISHED'}
+			elif event.ctrl:
+				print ("Ctrl+Click, Collection hide invoke")
+				self.invert_hide = True
+				return self.execute(context)
+			elif event.shift:
+				print ("Shift+Click, Collection hide invoke")
+				return {'FINISHED'}
+			elif event.alt:
+				print ("Alt+Click, Collection hide invoke")
+				return {'FINISHED'}
+			
+			
+		return self.execute(context)
+		
+	
+
+
+import bpy
+
+class Solo_OT_Mode(bpy.types.Operator):
+	bl_idname = "solo.mode"
+	bl_label = "Solo Mode Operator"
+
+	obj_name :bpy.props.StringProperty()
+
+	def invoke(self, context, event):
+		if event.ctrl and event.type == 'LEFTMOUSE':
+			
+			return self.execute(context)
+		return {'CANCELLED'}
+
+	def execute(self, context):
+
+		
+
+		return {'FINISHED'}
+
+	def store_visibility(self):
+		# Store visibility properties of all light objects in the 'Lights' collection
+		for obj in bpy.data.collections['Lights'].objects:
+			obj['stored_visibility'] = obj.hide_viewport
+
+	def restore_visibility(self):
+		# Restore stored visibility properties of all light objects in the 'Lights' collection
+		for obj in bpy.data.collections['Lights'].objects:
+			if 'stored_visibility' in obj:
+					obj.hide_viewport = obj['stored_visibility']
+					del obj['stored_visibility']
+					if 'solo' in obj:
+						del obj['solo']
+
+
+
 @persistent
 def lights_timer1():
 	global LIGHT_CNT_TIMER
@@ -582,16 +882,22 @@ def lights_timer1():
 
 
 
-
-
-PREFIX = "S"
-
 #==================================================================================================
+def get_all_light_objects(context):
+
+	return [o for o in context.view_layer.objects if o.type == "LIGHT" and o.data.vray.light_type != "BLENDER"]
+
 def get_collections():
 
 	#include also the scene base collection
 	colls = [bpy.context.scene.collection, *bpy.data.collections]
 	return [i for i in colls if i.name.startswith(PREFIX)]
+
+def get_collections_which_have_light_objects():
+
+	#include also the scene base collection
+	colls = [bpy.context.scene.collection, *bpy.data.collections]
+	return [i for i in colls if i.name.startswith(PREFIX) and any(o.type == "LIGHT" and o.data.vray.light_type != "BLENDER" for o in i.objects)]
 
 def get_collection_light_objects(coll: bpy.types.Collection):
 	return [o for o in coll.objects if o.type == "LIGHT" and o.data.vray.light_type != "BLENDER"]
