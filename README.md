@@ -22,6 +22,9 @@
 > To do:
 * [ ] All VRay light types
 * [ ] Light size parameters
+
+> [!TIP]
+> Optional information to help a user be more successful.
 * [ ] Global based visibility, on/off for all lights
 
 > [!TIP]
