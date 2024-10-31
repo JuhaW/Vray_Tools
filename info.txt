@@ -5,7 +5,7 @@ hide				#true/false
 panel_open		#true/false
 lock 				#true/false, indicator
 
-
+----------------------------
 Light object
 ============
 visibility_lock	#true/false
@@ -18,8 +18,14 @@ solo_stored_visibility	#bool, when one of the objects is solo mode
 								#so when solo mode is off, objects visibility
 								#can be restored
 
-
+----------------------------
+world
+=====
+hide_viewport				#bool
+----------------------------
 
 Operator
 ========
 solo_ui						#bool, Collection_OT_Hide.
+
+----------------------------

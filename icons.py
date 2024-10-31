@@ -13,7 +13,7 @@ def load_VRay_icons():
 
 	icon_names={"SUN":"VRayLightSun", "DOME":"VRayLightDome", "RECT":"VRayLightRectangle",
 					"SPHERE":"VRayLightSphere", "SPOT":"VRayLightSpot",
-					"MESH":"VRayLightMesh"}
+					"MESH":"VRayLightMesh", "SUN_SKY":"VRaySunSky"}
 
 	for i in icon_names.keys():
 		VRAY_ICONS.load(name=i, path=path+icon_names[i]+".png", path_type='IMAGE')

@@ -232,13 +232,21 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 		layout = self.layout
 		row = layout.row(align=False)
 		row.operator("lights.refresh", icon="FILE_REFRESH")
-		row.alignment='RIGHT'
+		
 		#GI 
 		row.prop(context.scene.vray.SettingsGI, "on",text="", icon="MOD_SOFT")
-
-		#row = layout.row()
-		#row.alignment = 'EXPAND'
 		row = layout.row(align=True)
+#WORLD ENVIRONMENT		
+		row = layout.box()
+		row = row.row(align=True)
+		row.separator(factor=1)
+		row.label(text="",icon_value=icons.VRAY_ICONS['SUN_SKY'].icon_id)
+		if context.scene.world:
+			row.active = not context.scene.world["hide_viewport"]
+			row.operator("environment.hide", text="", icon="HIDE_ON" if context.scene.world["hide_viewport"] else "HIDE_OFF")
+			row.label(text="Environment")
+		else:
+			row.label(text="No environment")
 		#row.operator("add.lights", icon="ADD")
 
 #============================================
@@ -460,6 +468,7 @@ def Lights_refresh():
 
 	print("Lights_refresh")
 	colls = get_collections_which_have_light_objects()
+	
 	for coll in colls:
 		#set hide/show
 		coll["hide"] = False
@@ -468,14 +477,27 @@ def Lights_refresh():
 		#set object view locked/unlocked
 		coll["lock"] = False
 	
-	for coll in colls:
-		for o in coll.objects:
+	light_objs = get_all_light_objects(bpy.context)	
+	for o in light_objs:
+		if not o.get("visibility_lock", False):
+			o["visibility_lock"] = False
+		if not o.get("lock", False):
+			o["lock"] = False
+		if not o.get("solo", False):
 			o["solo"] = False
+		if not o.get("solo_stored_visibility", False):
+			o["solo_stored_visibility"] = False
 
 	#solo indicator for poll
 	Collection_OT_Hide.solo_ui = False
-	return None
 
+	#world, environment visibility
+	if bpy.context.scene.world:
+		bpy.context.scene.world["hide_viewport"] = False
+	return None
+	#!todo is World 
+	#!todo is Environment node
+	#!todo is Environment connected to output
 
 	#context = bpy.context
 	
@@ -572,7 +594,27 @@ class Collection_OT_Select_Lights(bpy.types.Operator):
 
 		return self.execute(context)
 
+class Environment_OT_Hide_Show(bpy.types.Operator):
+	bl_idname = "environment.hide"
+	bl_label = ""
+	bl_options = {'REGISTER', 'UNDO'}	# enable undo for the operator.
+	bl_description = 	("Hide/show on viewport and render.\n"
+							"Ctrl+Click to lock")
+		
+	def execute(self, context):
 
+		context.scene.world["hide_viewport"] ^= True
+		if context.scene.world["hide_viewport"]:
+			sky(unlink_env_and_output=True)
+			print("Unlink")
+		else:
+			sky(link_env_and_output=True)
+			print("Link")
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		print ("Invoke")
+		return self.execute(context)
 
 
 class Lights_OT_Hide_Show(bpy.types.Operator):
@@ -811,10 +853,6 @@ class Collection_OT_Hide(bpy.types.Operator):
 			
 		return self.execute(context)
 		
-	
-
-
-import bpy
 
 class Solo_OT_Mode(bpy.types.Operator):
 	bl_idname = "solo.mode"
@@ -849,7 +887,6 @@ class Solo_OT_Mode(bpy.types.Operator):
 						del obj['solo']
 
 
-
 @persistent
 def lights_timer1():
 	global LIGHT_CNT_TIMER
@@ -880,8 +917,6 @@ def lights_timer1():
 	return LIGHT_DELAY_TIMER
 
 
-
-
 #==================================================================================================
 def get_all_light_objects(context):
 
@@ -903,6 +938,60 @@ def get_collection_light_objects(coll: bpy.types.Collection):
 	return [o for o in coll.objects if o.type == "LIGHT" and o.data.vray.light_type != "BLENDER"]
 
 #==================================================================================================
+
+
+def sky(is_environment_node=False,
+			is_link_environment_to_output=False,
+			link_env_and_output=False,
+			unlink_env_and_output=False
+			):
+	
+	def get_env_node():
+		return next((node for node in ntree.nodes if node.bl_idname == "VRayNodeEnvironment"), None)
+
+	def get_output_node():
+		return next((node for node in ntree.nodes if node.bl_idname == "VRayNodeWorldOutput"), None)
+			
+	def is_environment_linked_to_output():
+		if env_node := get_env_node():
+			return any(l.to_node.bl_idname == "VRayNodeWorldOutput" and l.from_node == env_node for l in ntree.links)
+		return None
+
+	def link_env():
+		env = get_env_node()
+		out = get_output_node()
+		if env and out:
+			ntree.links.new(out.inputs['Environment'], env.outputs['Environment'])
+
+	def unlink_env():
+		env = get_env_node()
+		out = get_output_node()
+		if env and out:
+			#get the link
+			link = next((l for l in ntree.links if l.to_node == out and l.from_node == env), None)
+			if link:
+				ntree.links.remove(link)
+	
+	if w := bpy.context.scene.world:
+
+		ntree = w.node_tree
+		
+		if is_link_environment_to_output:
+			return is_environment_linked_to_output()
+		elif is_environment_node:
+			return get_env_node()		
+		elif link_env_and_output:
+			link_env()
+		elif unlink_env_and_output:
+			unlink_env()
+								
+			return True				
+	else:
+		print("world not found")		
+
+def sky_solo():
+
+	pass
 #print()
 #coll = get_collections()
 #print("coll:",coll)
