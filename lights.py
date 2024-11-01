@@ -247,7 +247,7 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 				row.operator("environment.hide", text="", icon_value=icons.CUSTOM_ICONS["SOLO"].icon_id)
 			else:
 				row.operator("environment.hide", text="", icon="HIDE_ON" if context.scene.world["hide_viewport"] else "HIDE_OFF")
-				row.label(text="Environment")
+			row.label(text="Environment")
 		else:
 			row.label(text="No environment")
 		#row.operator("add.lights", icon="ADD")
