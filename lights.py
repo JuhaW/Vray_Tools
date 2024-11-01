@@ -648,7 +648,6 @@ class Environment_OT_Hide_Show(bpy.types.Operator):
 		if world["solo"]:
 			if addon.light_solo_cnt == 0:
 				lights_store_visibility(context)
-				#world["solo_stored_visibility"] = world['hide_viewport'] 
 				
 			addon.light_solo_cnt += 1
 			print("env, light solo cnt:", addon.light_solo_cnt)
@@ -766,6 +765,8 @@ def lights_store_visibility(context):
 		object_hide_viewport_and_render(obj,True)
 	world = context.scene.world
 	world["solo_stored_visibility"] = world["hide_viewport"]
+	if not world["solo"]:
+		sky(unlink_env_and_output=True)
 
 def lights_restore_visibility(context):
 	print("lights restore")
@@ -775,6 +776,8 @@ def lights_restore_visibility(context):
 		obj.hide_viewport = obj["solo_stored_visibility"]
 	world = context.scene.world
 	world["hide_viewport"] = world["solo_stored_visibility"] 
+	if not world["hide_viewport"]:
+		sky(link_env_and_output=True)
 
 def object_hide_viewport_and_render(o, hide):
 	o.hide_viewport = hide
