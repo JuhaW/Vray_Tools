@@ -242,9 +242,12 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 		row.separator(factor=1)
 		row.label(text="",icon_value=icons.VRAY_ICONS['SUN_SKY'].icon_id)
 		if context.scene.world:
-			row.active = not context.scene.world["hide_viewport"]
-			row.operator("environment.hide", text="", icon="HIDE_ON" if context.scene.world["hide_viewport"] else "HIDE_OFF")
-			row.label(text="Environment")
+			row.active = not context.scene.world["hide_viewport"] or context.scene.world["solo"]
+			if context.scene.world["solo"]:
+				row.operator("environment.hide", text="", icon_value=icons.CUSTOM_ICONS["SOLO"].icon_id)
+			else:
+				row.operator("environment.hide", text="", icon="HIDE_ON" if context.scene.world["hide_viewport"] else "HIDE_OFF")
+				row.label(text="Environment")
 		else:
 			row.label(text="No environment")
 		#row.operator("add.lights", icon="ADD")
@@ -471,11 +474,14 @@ def Lights_refresh():
 	
 	for coll in colls:
 		#set hide/show
-		coll["hide"] = False
+		if not coll.get("hide", False):
+			coll["hide"] = False
 		#set panel open/closed
-		coll["panel_open"] = False
-		#set object view locked/unlocked
-		coll["lock"] = False
+		if not coll.get("panel_open", False):
+			coll["panel_open"] = False
+		if not coll.get("lock", False):
+			#set object view locked/unlocked
+			coll["lock"] = False
 	
 	light_objs = get_all_light_objects(bpy.context)	
 	for o in light_objs:
@@ -488,17 +494,26 @@ def Lights_refresh():
 		if not o.get("solo_stored_visibility", False):
 			o["solo_stored_visibility"] = False
 
-	#solo indicator for poll
-	Collection_OT_Hide.solo_ui = False
-
+	
 	#world, environment visibility
 	if bpy.context.scene.world:
-		bpy.context.scene.world["hide_viewport"] = False
+		w = bpy.context.scene.world
+		if not w.get("hide_viewport", False):
+			w["hide_viewport"] = False
+		if not w.get("solo", False):
+			w["solo"] = False
+		if not w.get("solo_stored_visibility", False):
+			w["solo_stored_visibility"] = False
+		
+	bpy.context.scene.addon.light_solo_cnt = 0
+	
+	print("solo_cnt", bpy.context.scene.addon.light_solo_cnt)
+
 	return None
 	#!todo is World 
 	#!todo is Environment node
 	#!todo is Environment connected to output
-
+	
 	#context = bpy.context
 	
 	"""
@@ -613,9 +628,39 @@ class Environment_OT_Hide_Show(bpy.types.Operator):
 		return {'FINISHED'}
 
 	def invoke(self, context, event):
-		print ("Invoke")
+		
+		if event.type == 'LEFTMOUSE' and event.alt:
+			print("Leftclick+ alt")
+			
+			self.solo(context)	
+
+			return {'FINISHED'}
+		elif context.scene.addon.light_solo_cnt > 0:
+			return {'FINISHED'}
+		
 		return self.execute(context)
 
+	def solo(self,context):
+		#if solo_cnt == 0, no lights and env are not in solo mode
+		world = context.scene.world
+		world["solo"] ^= True
+		addon = context.scene.addon
+		if world["solo"]:
+			if addon.light_solo_cnt == 0:
+				lights_store_visibility(context)
+				#world["solo_stored_visibility"] = world['hide_viewport'] 
+				
+			addon.light_solo_cnt += 1
+			print("env, light solo cnt:", addon.light_solo_cnt)
+		else:
+			addon.light_solo_cnt -= 1
+			print("env, light solo cnt:", addon.light_solo_cnt)
+			if addon.light_solo_cnt == 0:
+				lights_restore_visibility(context)
+			else:
+				world['hide_viewport'] = True
+				sky(unlink_env_and_output=True)
+	
 
 class Lights_OT_Hide_Show(bpy.types.Operator):
 
@@ -643,9 +688,9 @@ class Lights_OT_Hide_Show(bpy.types.Operator):
 		o = bpy.data.objects[self.obj_name]
 		#if solo mode is on of this object, ignore click except solo mode click (Alt)
 		#solo_mode =  o.get("solo", False)
-		solo_mode = Collection_OT_Hide.solo_ui
+		light_solo_cnt = context.scene.addon.light_solo_cnt
 		
-		if not solo_mode and event.ctrl and event.type =='LEFTMOUSE': 
+		if light_solo_cnt == 0 and event.ctrl and event.type =='LEFTMOUSE': 
 			print ("Leftclick+ ctrl")
 			
 			if not o.get("lock", False):
@@ -668,7 +713,7 @@ class Lights_OT_Hide_Show(bpy.types.Operator):
 			self.solo(context)
 
 			#Solo_OT_Mode.execute(self, context)
-		elif not solo_mode:
+		elif light_solo_cnt==0:
 			return self.execute(context)
 		
 		return {'FINISHED'}
@@ -687,32 +732,49 @@ class Lights_OT_Hide_Show(bpy.types.Operator):
 
 		o = bpy.data.objects[self.obj_name]
 		o["solo"] ^= True
-		#colls = get_collections_which_have_light_objects()
-		light_objs = get_all_light_objects(context)
+		addon = context.scene.addon
+		print ("light solo cnt:", addon.light_solo_cnt)
+		#light_objs = get_all_light_objects(context)
 		
-		objs = [ obj for obj in light_objs if obj.get("solo", False) and obj != o] 
-		if objs:
-			print("Yes, other objects in solo mode")
-			if o.get("solo", False):
-				object_hide_viewport_and_render(o, False)
+		#objs = [ obj for obj in light_objs if obj.get("solo", False) and obj != o] 
+		if o["solo"]:
+			print("Yes, in solo mode")
+			object_hide_viewport_and_render(o, False)
+			if addon.light_solo_cnt == 0:
+			
+				lights_store_visibility(context)
+					
+			object_hide_viewport_and_render(o, False)
+			addon.light_solo_cnt += 1
+			print ("light solo cnt:", addon.light_solo_cnt)
+			#ENV
+			context.scene.world["hide_viewport"] = True
+		else:
+			addon.light_solo_cnt -= 1
+			print("This light object not in solo mode")
+			if addon.light_solo_cnt == 0:
+				lights_restore_visibility(context)
+
 			else:
 				object_hide_viewport_and_render(o, True)
-			Collection_OT_Hide.solo_ui = True
-		else:
-			print("No other objects in solo mode")
-			if o.get("solo", False):
-				#store all light objects visibility
-				for obj in light_objs:
-					obj["solo_stored_visibility"] = obj.hide_viewport
-					object_hide_viewport_and_render(obj,True)
-					
-				object_hide_viewport_and_render(o, False)
-				Collection_OT_Hide.solo_ui = True
-			else:	#restore all light objects visibility
-				for obj in light_objs:
-					obj.hide_viewport = obj["solo_stored_visibility"]
-				Collection_OT_Hide.solo_ui = False
 
+def lights_store_visibility(context):
+	#store all light objects visibility
+	light_objs = get_all_light_objects(context)
+	for obj in light_objs:
+		obj["solo_stored_visibility"] = obj.hide_viewport
+		object_hide_viewport_and_render(obj,True)
+	world = context.scene.world
+	world["solo_stored_visibility"] = world["hide_viewport"]
+
+def lights_restore_visibility(context):
+	print("lights restore")
+	#restore all light objects visibility
+	light_objs = get_all_light_objects(context)
+	for obj in light_objs:
+		obj.hide_viewport = obj["solo_stored_visibility"]
+	world = context.scene.world
+	world["hide_viewport"] = world["solo_stored_visibility"] 
 
 def object_hide_viewport_and_render(o, hide):
 	o.hide_viewport = hide
@@ -801,7 +863,7 @@ class Collection_OT_Hide(bpy.types.Operator):
 
 	@classmethod
 	def poll(cls, context):
-		return not cls.solo_ui
+		return  context.scene.addon.light_solo_cnt == 0 #cls.solo_ui
 
 	def execute(self, context):
 

@@ -14,7 +14,8 @@ bl_info = {
 
 import bpy
 from bpy.utils import register_classes_factory
-from bpy.props import BoolProperty, PointerProperty, CollectionProperty, StringProperty, FloatProperty
+from bpy.props import BoolProperty, IntProperty, PointerProperty
+from bpy.props import CollectionProperty, StringProperty, FloatProperty
 #from bpy.props import Shader
 from bpy.app.handlers import persistent
 import sys
@@ -75,18 +76,17 @@ def update_lights(self, context):
 class Shadow_Catch(bpy.types.PropertyGroup):
 	obj			: PointerProperty(type=bpy.types.Object)
 
-class Lights_on(bpy.types.PropertyGroup):
-	on 			: BoolProperty(default = True, update=update_lights, description="Set lights on/off from both viewport and render")
-	light_type	: StringProperty()
+class Lights(bpy.types.PropertyGroup):
 	
+	pass
 
 class Addon_variables(bpy.types.PropertyGroup):
 
 	shadow_catcher_objects 		: CollectionProperty(type=Shadow_Catch)
 	show_texture_all_objects 	: BoolProperty(default = True, description="If ON, set image textures to all objects. If OFF, set only selected objects image textures")
-	lights 		: CollectionProperty(type=Lights_on)
+	#lights 		: CollectionProperty(type=Lights_on)
+	light_solo_cnt 				: IntProperty(default = 0) #Number of light objects and world environment are in solo mode
 
-	Light_solo_mode = BoolProperty(default = False) #When one of the collection light object clicked as solo, this will be True
 
 class Vray_Tools_PT_Panel(bpy.types.Panel):
 	"""Creates a Panel in the Object properties window"""
