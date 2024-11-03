@@ -58,62 +58,67 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 			gf.emboss = "NORMAL"
 			light_type = o.data.vray.light_type
 			od = o.data.vray
+			color_scalex = .1
+			intensity_scalex = .3
 			match light_type:
 				case "DOME":
 					#do not read from dome node if there are no dome.nodetree or dome node
 					if dome_node := (F.node_dome_find(o.data.node_tree.nodes) if o.data.node_tree else None):
-						gf.scale_x = .2
+						gf.scale_x = color_scalex
+						#check if Light dome node has input links on socket [Dome Color]
+						#if not, use dome color for ui
+						if dome_node.inputs['Dome Color'].links:
+							color = dome_node.inputs['Dome Color']
+							gf.scale_x = .3
+							gf.prop(color, "multiplier",text = "")
+							gf.scale_x = .05
+						
 						color = dome_node.inputs['Dome Color']
 						gf.prop(color, "value",text="")
-						#dome_node = F.node_dome_find(o.data.node_tree.nodes)
-						
+							
 						intensity = dome_node.inputs['Intensity']
-						gf.scale_x = .5
+						gf.scale_x = intensity_scalex
 						gf.prop(intensity, "value", text="")
 						invisible = dome_node.inputs['Invisible']
 						gf.scale_x = 1
 						gf.prop(invisible, "value", text="",emboss=False,icon="RESTRICT_RENDER_ON" if invisible.value else "RESTRICT_RENDER_OFF")
-						
-							#gf.scale_x = 3
-							#gf.prop(o, "tag",text="",icon="BLANK1", emboss=False)
-							#gf.scale_x = 3
-							#gf.prop(o, "tag",text="",icon="BLANK1", emboss=False)
+
 					else:
-						gf.scale_x = .2
+						gf.scale_x = color_scalex
 						gf.prop(od.LightDome, "color_colortex", text="")
-						gf.scale_x = .5
+						gf.scale_x = intensity_scalex
 						gf.prop(od.LightDome, "intensity", text="")
 						invisible(od.LightDome)
 				case "SUN":
-					gf.scale_x = .2
+					gf.scale_x = color_scalex
 					gf.prop(od.SunLight, "filter_color", text="")
-					gf.scale_x = .5
+					gf.scale_x = intensity_scalex
 					gf.prop(od.SunLight, "intensity_multiplier", text="")
 					invisible(od.SunLight)
 				case "RECT":
-					gf.scale_x = .2
-					#gf.prop(od.LightRectangle, "color_colortex", text="")
-					gf.template_color_picker(od.LightRectangle, "color_colortex", value_slider=False, lock=False, lock_luminosity=False, cubic=False)
-					gf.scale_x = .5
+					gf.scale_x = color_scalex
+					gf.prop(od.LightRectangle, "color_colortex", text="")
+					#gf.template_color_picker(od.LightRectangle, "color_colortex", value_slider=False, lock=False, lock_luminosity=False, cubic=False)
+					gf.scale_x = intensity_scalex
 					gf.prop(od.LightRectangle, "intensity", text="")
 					invisible(od.LightRectangle)
 				case "SPHERE":
-					gf.scale_x = .2
+					gf.scale_x = color_scalex
 					gf.prop(od.LightSphere, "color_colortex", text="")
-					gf.scale_x = .5
+					gf.scale_x = intensity_scalex
 					gf.prop(od.LightSphere, "intensity", text="")
 					invisible(od.LightSphere)
 				case "SPOT":
-					gf.scale_x = .2
+					gf.scale_x = color_scalex
 					gf.prop(od.LightSpot, "color_colortex", text="")
-					gf.scale_x = .5
+					gf.scale_x = intensity_scalex
 					gf.prop(od.LightSpot, "intensity", text="")
 					gf.scale_x = 1
 					gf.prop(o, "tag", text="",emboss=False, icon="BLANK1")
 				case "MESH":
-					gf.scale_x = .2
+					gf.scale_x = color_scalex
 					gf.prop(od.LightMesh, "color_colortex", text="")
-					gf.scale_x = .5
+					gf.scale_x = intensity_scalex
 					gf.prop(od.LightMesh, "intensity", text="")
 					invisible(od.LightMesh)
 
@@ -200,11 +205,11 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 					#gf = layout.grid_flow(columns=5, align=True)
 					
 					row = cf.row()
-					gf = row.grid_flow(columns=7, align=True)
+					gf = row.grid_flow(columns=8, align=True)
 					gf.separator(factor=1)
 					#light type icon
 					l_type = o.data.vray.light_type
-					gf.scale_x = 2 #!1.5
+					gf.scale_x = 1 #!1.5
 					
 					if l_type in ["SUN", "DOME", "RECT", "SPHERE","SPOT", "MESH" ]:
 						gf.label(text="", icon_value=icons.VRAY_ICONS[l_type].icon_id)
@@ -218,7 +223,7 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 					#set also collection lock indicator locked = red 
 					if o.get("lock", False):
 						gf.alert = True
-					gf.scale_x = 2 #!1.2
+					gf.scale_x = 1 #!1.2
 					#if Collection_OT_Hide.solo_ui:
 					if o.hide_viewport:
 						gf.active = False
