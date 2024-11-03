@@ -1,16 +1,18 @@
 # 𝕍-ℝ𝕒𝕪 𝕋𝕠𝕠𝕝𝕤
 
+``
+
 > ## 𝗟𝗶𝗴𝗵𝘁𝘀
 
 * Collection based visibility
-  
+
   * Object based visibility
 * Solo mode
-  
+
   * Multiple lights can be soloed inside multiple collections
   * Exiting solo mode will restore all lights viewport visibilities
 * Locked visibility
-  
+
   * Lights visibility can be locked so it overrides Collection visibility
 * Visibilities affects both - viewport and render
 
@@ -29,6 +31,12 @@
 * [ ] Light size parameters
 * [ ] Global based visibility, on/off for all lights
 
-> [!TIP]
-> Use at your own risk ;)
 
+
+
+Solo
+
+<img src="https://github.com/JuhaW/Vray_Tools/blob/Lights-by-Collections/icons/Solo.png?raw=true" width="32" height="32">
+
+[!TIP]
+Use at your own risk ;)

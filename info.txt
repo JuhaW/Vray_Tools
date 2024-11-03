@@ -22,11 +22,14 @@ solo_stored_visibility	#bool, when one of the objects is solo mode
 world
 =====
 hide_viewport				#bool
+solo							#bool
 solo_stored_visibility	#bool
 ----------------------------
 
-Operator
-========
-solo_ui						#bool, Collection_OT_Hide.
+
 
 ----------------------------
+
+#1. yes "node_tree", yes "dome node"
+#2. yes "node_tree",no "dome node"
+#3. no "node_tree"

@@ -13,128 +13,13 @@ LIGHT_ICONS = {"DOME": "LIGHT_HEMI","SUN": "LIGHT_SUN","RECT": "LIGHT_AREA",
 					"SPHERE": "LIGHT_POINT","SPOT": "LIGHT_SPOT","MESH": "MESH_MONKEY"}
 PREFIX = ""
 
-#			10        20        30        40        50        60        70        80        90        100	
+
+"""   	10        20        30        40        50        60        70        80        90        100	"""
+
 #2345678901234567890123456789012345678901234567890123456789012345678901234567890
 LIGHT_TYPES = ["DOME", "SUN", "RECT", "SPHERE", "SPOT"]
 
-def draw_panel(self, context, light_type):
-	
-	def splitter(factor_, split_):
-
-		split = split_.split(factor=factor_)
-		col = split.column(align=True)
-		return split,col
-	
-	def invisible(light, col):
-		col.prop(light, "invisible",emboss=False, text="",icon="RESTRICT_RENDER_ON" if light.invisible else "RESTRICT_RENDER_OFF")
-	
-	layout = self.layout
-	
-	for o in LIGHTS[light_type]["objects"]:
-		row = layout.row(align=True)
-		row.alignment = 'LEFT'	
-		split = row.split(factor=0.1)
-		col1 = split.column(align=True)
-		
-		#1
-		#check if light object has "visibility lock", if so, make row as red color
-		obj = bpy.data.objects.get(o, None)
-		if obj and obj.get("visibility_lock", False):
-			col1.alert = True
-		else:
-			col1.alert = False
-
-		col1.operator("lights.hide",text="", icon="HIDE_ON" if bpy.data.objects[o].hide_viewport else "HIDE_OFF").obj = o 
-		
-		#2
-		split, col = splitter(0.4, split)
-		#split = split.split(factor=0.4)
-		#col2 = split.column(align=True)
-		
-		#if context.view_layer.objects.active == context.view_layer.objects[o]:
-		if context.view_layer.objects[o].select_get():
-			col.emboss = 'NORMAL'
-		else:
-			col.emboss = 'PULLDOWN_MENU'
-		
-		col.operator("object.select_object", text=o).obj = o
-		
-		od = bpy.data.objects[o].data.vray
-		
-		if light_type == "DOME":
-			#4
-			split,col = splitter(0.9, split)
-			obj = bpy.data.objects[o]
-			if obj.data.node_tree:
-				intensity = obj.data.node_tree.nodes[obj["dome_nodename"]].inputs['Intensity']
-				col.prop(intensity, "value", text="")
-			
-				#5
-				split,col = splitter(1, split)
-				col.alignment = 'RIGHT'
-				invisible = obj.data.node_tree.nodes[obj["dome_nodename"]].inputs['Invisible']
-				col.prop(invisible, "value", text="",emboss=False,icon="RESTRICT_RENDER_ON" if invisible.value else "RESTRICT_RENDER_OFF")
-
-		elif light_type == "SUN":
-
-			#3
-			split,col = splitter(0.3, split)
-			col.prop(od.SunLight, "filter_color", text="")
-			#4
-			split,col = splitter(0.9, split)
-			col.prop(od.SunLight, "intensity_multiplier", text="")
-			#5
-			split,col = splitter(1, split)
-			col.alignment = 'RIGHT'
-			col.scale_x = .1
-			invisible(od.SunLight, col)
-
-		elif light_type =="RECT":
-
-			split,col = splitter(0.3, split)
-			col.prop(od.LightRectangle, "color_colortex", text="")
-
-			split,col = splitter(0.9, split)
-			col.prop(od.LightRectangle, "intensity", text="", expand=True)
-
-			split,col = splitter(1, split)
-			col.alignment = 'RIGHT'
-			invisible(od.LightRectangle, col)
-			
-
-		elif light_type =="SPHERE":
-			
-			split,col = splitter(0.3, split)
-			col.prop(od.LightSphere, "color_colortex", text="")
-			
-			split,col = splitter(0.9, split)
-			col.prop(od.LightSphere, "intensity", text="")
-
-			split,col = splitter(1, split)
-			col.alignment = 'RIGHT'
-			invisible(od.LightSphere, col)
-
-		elif light_type =="SPOT":
-			
-			split,col = splitter(0.3, split)
-			col.prop(od.LightSpot, "color_colortex", text="")
-			
-			split,col = splitter(0.9, split)
-			col.prop(od.LightSpot, "intensity", text="")
-
-			split,col = splitter(1, split)
-			col.alignment = 'RIGHT'
-			#invisible(od.LightSpot, col)
-			col.label(text="")
-
-		else:
-			pass
-		
-		#bpy.data.lights["VRayRectLight"].vray.LightRectangle.color_colortex
-		#row.label(text=o.name)
-#bpy.data.lights["VRaySunLight"].vray.SunLight.filter_color sun
-#bpy.data.lights["VRayDomeLight.001"].node_tree.nodes["Light Dome"].inputs['Color'].value 
-
+#============================================
 def select(obj_name, invert=False):
 
 
@@ -147,10 +32,9 @@ def select(obj_name, invert=False):
 
 	bpy.context.view_layer.objects.active = o
 
+#============================================
 
-#============================================
-#PANEL
-#============================================
+
 class Vray_Lights_PT_Panel(bpy.types.Panel):
 	
 	bl_parent_id = "VRAYTOOLS_PT_Panel"
@@ -162,8 +46,8 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 
 	def draw(self, context):
 
-
-
+#======
+#UI LIGHT TYPE
 		def light_type():
 
 			def invisible(light):
@@ -176,22 +60,24 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 			od = o.data.vray
 			match light_type:
 				case "DOME":
-					if o.data.node_tree:
+					#do not read from dome node if there are no dome.nodetree or dome node
+					if dome_node := (F.node_dome_find(o.data.node_tree.nodes) if o.data.node_tree else None):
 						gf.scale_x = .2
-						gf.prop(o, "tag",text=" ",emboss=False,icon="BLANK1")
-						dome_node = F.node_dome_find(o.data.node_tree.nodes)
-						if dome_node:
-							intensity = dome_node.inputs['Intensity']
-							gf.scale_x = .5
-							gf.prop(intensity, "value", text="")
-							invisible = dome_node.inputs['Invisible']
-							gf.scale_x = 1
-							gf.prop(invisible, "value", text="",emboss=False,icon="RESTRICT_RENDER_ON" if invisible.value else "RESTRICT_RENDER_OFF")
-						else:
-							gf.scale_x = 3
-							gf.prop(o, "tag",text="",icon="BLANK1", emboss=False)
-							gf.scale_x = 3
-							gf.prop(o, "tag",text="",icon="BLANK1", emboss=False)
+						color = dome_node.inputs['Dome Color']
+						gf.prop(color, "value",text="")
+						#dome_node = F.node_dome_find(o.data.node_tree.nodes)
+						
+						intensity = dome_node.inputs['Intensity']
+						gf.scale_x = .5
+						gf.prop(intensity, "value", text="")
+						invisible = dome_node.inputs['Invisible']
+						gf.scale_x = 1
+						gf.prop(invisible, "value", text="",emboss=False,icon="RESTRICT_RENDER_ON" if invisible.value else "RESTRICT_RENDER_OFF")
+						
+							#gf.scale_x = 3
+							#gf.prop(o, "tag",text="",icon="BLANK1", emboss=False)
+							#gf.scale_x = 3
+							#gf.prop(o, "tag",text="",icon="BLANK1", emboss=False)
 					else:
 						gf.scale_x = .2
 						gf.prop(od.LightDome, "color_colortex", text="")
@@ -206,7 +92,8 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 					invisible(od.SunLight)
 				case "RECT":
 					gf.scale_x = .2
-					gf.prop(od.LightRectangle, "color_colortex", text="")
+					#gf.prop(od.LightRectangle, "color_colortex", text="")
+					gf.template_color_picker(od.LightRectangle, "color_colortex", value_slider=False, lock=False, lock_luminosity=False, cubic=False)
 					gf.scale_x = .5
 					gf.prop(od.LightRectangle, "intensity", text="")
 					invisible(od.LightRectangle)
@@ -229,13 +116,30 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 					gf.scale_x = .5
 					gf.prop(od.LightMesh, "intensity", text="")
 					invisible(od.LightMesh)
+
+#=====
+# GLOBAL		
 		layout = self.layout
 		row = layout.row(align=False)
-		row.operator("lights.refresh", icon="FILE_REFRESH")
+		row.operator("lights.refresh", icon_value=icons.CUSTOM_ICONS["REFRESH_LIGHTS"].icon_id)#"FILE_REFRESH")
 		
 		#GI 
-		row.prop(context.scene.vray.SettingsGI, "on",text="", icon="MOD_SOFT")
+		row.prop(context.scene.vray.SettingsGI, "on",text="",icon_value=icons.CUSTOM_ICONS["GI"].icon_id )#icon="MOD_SOFT")
 		row = layout.row(align=True)
+		#row.scale_x = 1
+		#row.separator(factor=1,type='AUTO')
+		#row = layout.row(align=True)
+		row.label(text="Global settings:")
+		row = layout.row(align=True)
+		#row.template_color_picker(context.object.data.vray.LightRectangle, "color_colortex", value_slider=False, lock=False, lock_luminosity=False, cubic=True)
+		row.template_icon(icon_value=icons.CUSTOM_ICONS["SOLO"].icon_id , scale=1.5)
+		row.template_icon(icon_value=icons.CUSTOM_ICONS["GI"].icon_id , scale=1.5)
+		#img = bpy.data.textures[1]
+		#row.template_preview(img)
+		row.label(text="GI", icon_value=icons.CUSTOM_ICONS["DOME"].icon_id)
+		row = layout.row(align=True)
+		
+#=====
 #WORLD ENVIRONMENT		
 		row = layout.box()
 		row = row.row(align=True)
@@ -300,7 +204,7 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 					gf.separator(factor=1)
 					#light type icon
 					l_type = o.data.vray.light_type
-					gf.scale_x = 1 #!1.5
+					gf.scale_x = 2 #!1.5
 					
 					if l_type in ["SUN", "DOME", "RECT", "SPHERE","SPOT", "MESH" ]:
 						gf.label(text="", icon_value=icons.VRAY_ICONS[l_type].icon_id)
@@ -314,7 +218,7 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 					#set also collection lock indicator locked = red 
 					if o.get("lock", False):
 						gf.alert = True
-					gf.scale_x = 1 #!1.2
+					gf.scale_x = 2 #!1.2
 					#if Collection_OT_Hide.solo_ui:
 					if o.hide_viewport:
 						gf.active = False
@@ -464,7 +368,7 @@ def lights_refresh_from_timer(o):
 			if not region:
 				return
 			#print("region.redraw")
-			#region.tag_redraw()
+			
 
 
 def Lights_refresh():
@@ -577,7 +481,6 @@ class Lights_OT_Refresh(bpy.types.Operator):
 
 		return {'FINISHED'}
 	
-
 class Collection_OT_Select_Lights(bpy.types.Operator):
 
 	bl_idname = "collection.select_lights"
@@ -648,6 +551,7 @@ class Environment_OT_Hide_Show(bpy.types.Operator):
 		if world["solo"]:
 			if addon.light_solo_cnt == 0:
 				lights_store_visibility(context)
+				sky(link_env_and_output=True)
 				
 			addon.light_solo_cnt += 1
 			print("env, light solo cnt:", addon.light_solo_cnt)
@@ -660,7 +564,6 @@ class Environment_OT_Hide_Show(bpy.types.Operator):
 				world['hide_viewport'] = True
 				sky(unlink_env_and_output=True)
 	
-
 class Lights_OT_Hide_Show(bpy.types.Operator):
 
 	bl_idname = "lights.hide"
@@ -821,7 +724,6 @@ class Splitter_OT_Splatter(bpy.types.Operator):
 		
 		return {'FINISHED'}
 	
-
 class Add_OT_Lights(bpy.types.Operator):
 	
 	bl_idname = "add.lights"
@@ -917,8 +819,7 @@ class Collection_OT_Hide(bpy.types.Operator):
 			
 			
 		return self.execute(context)
-		
-
+	
 class Solo_OT_Mode(bpy.types.Operator):
 	bl_idname = "solo.mode"
 	bl_label = "Solo Mode Operator"
@@ -1004,7 +905,6 @@ def get_collection_light_objects(coll: bpy.types.Collection):
 
 #==================================================================================================
 
-
 def sky(is_environment_node=False,
 			is_link_environment_to_output=False,
 			link_env_and_output=False,
@@ -1054,15 +954,7 @@ def sky(is_environment_node=False,
 	else:
 		print("world not found")		
 
-def sky_solo():
-
-	pass
-#print()
-#coll = get_collections()
-#print("coll:",coll)
-
-#objs = get_collection_light_objects(coll[0])
-#print("Collection:",coll[0].name, "has these objects:", objs[:])
 
 
-
+#Selected lamp object's properties>data
+#C.screen.areas[0].spaces.active.context = "DATA"
