@@ -46,6 +46,9 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 
 	def draw(self, context):
 
+# The above code is a Python script with comments. Comments in Python start with the `#` symbol. In
+# this script, there are multiple comments denoted by `#` symbol. However, the script itself does not
+# contain any executable code. It is just a series of comments.
 #======
 #UI LIGHT TYPE
 		def light_type():
