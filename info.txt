@@ -20,16 +20,30 @@ solo_stored_visibility	#bool, when one of the objects is solo mode
 
 ----------------------------
 world
-=====
-hide_viewport				#bool
-solo							#bool
+==============================
+hide_viewport						#bool
+solo										#bool
 solo_stored_visibility	#bool
+lock										#bool
 ----------------------------
 
 
 
-----------------------------
+----------------------------------------
+What Lights_refresh function show do ?
 
-#1. yes "node_tree", yes "dome node"
-#2. yes "node_tree",no "dome node"
-#3. no "node_tree"
+	if Collection has no above mentioned property, add it
+	
+	if light object has no above mentioned property, add it
+	if light object has above mentioned property, do nothing
+	
+	if context.scene.world has no above mentioned property, add it
+
+What should be in Global light- section ?
+
+	Turn all lights visibility on/off
+	Turn world environment visibility on/off (if exists)
+
+	Turn off all locked light objects (red)
+
+	<img src="icons\LightData.png" />

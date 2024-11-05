@@ -30,8 +30,9 @@ def load_Custom_icons():
 	#pathlib.Path(__file__).parent
 	
 	path = str(pathlib.Path(__file__).parent) + r"/icons/"
-	icon_names={"SOLO":"Solo","REFRESH_LIGHTS":"RefreshLights",
-					"GI":"GI", "DOME":"DomeLight"}
+	icon_names={"SOLO" :"Solo",	"REFRESH_LIGHTS":"RefreshLights",
+							"GI"	 :"GI", 		"DOME"					:"DomeLight", 
+							"DATA" :"LightData",}
 
 	for i in icon_names.keys():
 		CUSTOM_ICONS.load(name=i, path=path+icon_names[i]+".png", path_type='IMAGE')

@@ -870,3 +870,5 @@ todo.txt
 __pycache__/icons.cpython-311.pyc
 __pycache__/lights.cpython-311.pyc
 __pycache__/caustics.cpython-311.pyc
+icons/LightData.png
+svg/info.svg

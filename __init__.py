@@ -86,6 +86,9 @@ class Addon_variables(bpy.types.PropertyGroup):
 	show_texture_all_objects 	: BoolProperty(default = True, description="If ON, set image textures to all objects. If OFF, set only selected objects image textures")
 	#lights 		: CollectionProperty(type=Lights_on)
 	light_solo_cnt 				: IntProperty(default = 0) #Number of light objects and world environment are in solo mode
+	lights_global_visibility		: BoolProperty(default = False)
+	#selecting light object activate PROPERTIES window > DATA section
+	lights_activate_data_area	: BoolProperty(default = True, description="Auto activate light properties")
 
 
 class Vray_Tools_PT_Panel(bpy.types.Panel):
@@ -177,7 +180,7 @@ def register():
 	
 	
 	# Sun clouds presets
-	bpy.types.VRAY_PT_context_lamp.append(SunClouds.panel_func)
+	#bpy.types.VRAY_PT_context_lamp.append(SunClouds.panel_func)
 	SunClouds.Vray_Clouds_attr_get()
 
 	F.register_classes(__package__) #this __init__.py file

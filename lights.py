@@ -1,4 +1,5 @@
 import bpy
+from bpy.props import BoolProperty
 from . __init__ import Vray_Tools_PT_Panel #VRAYLIGHTS_PT_Panel
 from . import functions as F
 from bpy.app.handlers import persistent
@@ -20,17 +21,24 @@ PREFIX = ""
 LIGHT_TYPES = ["DOME", "SUN", "RECT", "SPHERE", "SPOT"]
 
 #============================================
+#Select light object
 def select(obj_name, invert=False):
 
 
 	o = bpy.data.objects[obj_name]
+	
 	if not invert:
 		bpy.ops.object.select_all(action='DESELECT')
 		o.select_set(True)
+	
 	else:
 		o.select_set(not o.select_get())
 
 	bpy.context.view_layer.objects.active = o
+	#PROPERTIES window, DATA area active for light
+	F.data_area_active(bpy.context)
+
+	
 
 #============================================
 
@@ -52,7 +60,8 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 #======
 #UI LIGHT TYPE
 		def light_type():
-
+#=====
+#UI Light Invisible
 			def invisible(light):
 				gf.scale_x = 1
 				gf.prop(light, "invisible",emboss=False, text="",icon="RESTRICT_RENDER_ON" if light.invisible else "RESTRICT_RENDER_OFF")
@@ -72,9 +81,9 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 						#if not, use dome color for ui
 						if dome_node.inputs['Dome Color'].links:
 							color = dome_node.inputs['Dome Color']
-							gf.scale_x = .3
-							gf.prop(color, "multiplier",text = "")
-							gf.scale_x = .05
+							#gf.scale_x = .3
+							#gf.prop(color, "multiplier",text = "")
+							#gf.scale_x = .05
 						
 						color = dome_node.inputs['Dome Color']
 						gf.prop(color, "value",text="")
@@ -126,7 +135,7 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 					invisible(od.LightMesh)
 
 #=====
-# GLOBAL		
+# UI GLOBAL 
 		layout = self.layout
 		row = layout.row(align=False)
 		row.operator("lights.refresh", icon_value=icons.CUSTOM_ICONS["REFRESH_LIGHTS"].icon_id)#"FILE_REFRESH")
@@ -137,29 +146,45 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 		#row.scale_x = 1
 		#row.separator(factor=1,type='AUTO')
 		#row = layout.row(align=True)
-		row.label(text="Global settings:")
-		row = layout.row(align=True)
-		#row.template_color_picker(context.object.data.vray.LightRectangle, "color_colortex", value_slider=False, lock=False, lock_luminosity=False, cubic=True)
-		row.template_icon(icon_value=icons.CUSTOM_ICONS["SOLO"].icon_id , scale=1.5)
-		row.template_icon(icon_value=icons.CUSTOM_ICONS["GI"].icon_id , scale=1.5)
+		row = layout.box()
+		row.label(text="Global settings for lights:")
+		#row = layout.box()
+		
+		#light object DATA area auto activate
+		split = row.split(factor=.5,align=True)
+		
+		#split.label(text="",icon_value=icons.CUSTOM_ICONS["DATA"].icon_id)
+		split.prop(context.scene.addon,"lights_activate_data_area",text="Show light options")
+		#row = layout.row(align=True)
+		
+		#Button visibility
+		split.operator("global.lights_visibility", text="", icon="HIDE_ON" if context.scene.addon.lights_global_visibility else "HIDE_OFF")
+		#split.operator("global.lights_visibility", text="", icon="HIDE_ON" if context.scene.addon.lights_global_visibility else "HIDE_OFF")
+		#row.template_icon(icon_value=icons.CUSTOM_ICONS["SOLO"].icon_id , scale=1.5)
+		#row.template_icon(icon_value=icons.CUSTOM_ICONS["GI"].icon_id , scale=1.5)
 		#img = bpy.data.textures[1]
 		#row.template_preview(img)
-		row.label(text="GI", icon_value=icons.CUSTOM_ICONS["DOME"].icon_id)
+		#row.label(text="GI", icon_value=icons.CUSTOM_ICONS["DOME"].icon_id)
 		row = layout.row(align=True)
 		
 #=====
-#WORLD ENVIRONMENT		
+#UI WORLD ENVIRONMENT		
 		row = layout.box()
 		row = row.row(align=True)
 		row.separator(factor=1)
 		row.label(text="",icon_value=icons.VRAY_ICONS['SUN_SKY'].icon_id)
 		if context.scene.world:
+
+			if context.scene.world.get("lock", None):
+				row.alert = True
+
 			row.active = not context.scene.world["hide_viewport"] or context.scene.world["solo"]
 			if context.scene.world["solo"]:
 				row.operator("environment.hide", text="", icon_value=icons.CUSTOM_ICONS["SOLO"].icon_id)
 			else:
 				row.operator("environment.hide", text="", icon="HIDE_ON" if context.scene.world["hide_viewport"] else "HIDE_OFF")
-			row.label(text="Environment")
+			row.alert = False
+			row.label(text="Environment (Sun and Sky)")
 		else:
 			row.label(text="No environment")
 		#row.operator("add.lights", icon="ADD")
@@ -256,8 +281,8 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 					#row = layout.row(align=True)
 					#gf.label(text="",icon="OBJECT_DATA")
 					#gf.label(text="",icon="OBJECT_DATA")
-					
-					
+
+
 #============================================
 #
 #============================================					
@@ -377,7 +402,6 @@ def lights_refresh_from_timer(o):
 				return
 			#print("region.redraw")
 			
-
 
 def Lights_refresh():
 
@@ -520,6 +544,8 @@ class Collection_OT_Select_Lights(bpy.types.Operator):
 
 		return self.execute(context)
 
+#=======
+#OP Environment hide
 class Environment_OT_Hide_Show(bpy.types.Operator):
 	bl_idname = "environment.hide"
 	bl_label = ""
@@ -539,7 +565,16 @@ class Environment_OT_Hide_Show(bpy.types.Operator):
 		return {'FINISHED'}
 
 	def invoke(self, context, event):
-		
+
+		if context.scene.addon.light_solo_cnt == 0 and event.ctrl and event.type =='LEFTMOUSE': 
+			
+			world = context.scene.world
+			if not world.get("lock", False):
+				world["lock"] = True
+			else:
+				world["lock"] ^= True #invert
+
+			return {'FINISHED'}
 		if event.type == 'LEFTMOUSE' and event.alt:
 			print("Leftclick+ alt")
 			
@@ -569,9 +604,10 @@ class Environment_OT_Hide_Show(bpy.types.Operator):
 			if addon.light_solo_cnt == 0:
 				lights_restore_visibility(context)
 			else:
-				world['hide_viewport'] = True
+				#world['hide_viewport'] = True
 				sky(unlink_env_and_output=True)
 	
+
 class Lights_OT_Hide_Show(bpy.types.Operator):
 
 	bl_idname = "lights.hide"
@@ -827,7 +863,9 @@ class Collection_OT_Hide(bpy.types.Operator):
 			
 			
 		return self.execute(context)
-	
+
+
+"""
 class Solo_OT_Mode(bpy.types.Operator):
 	bl_idname = "solo.mode"
 	bl_label = "Solo Mode Operator"
@@ -859,6 +897,38 @@ class Solo_OT_Mode(bpy.types.Operator):
 					del obj['stored_visibility']
 					if 'solo' in obj:
 						del obj['solo']
+
+"""
+#======
+#Global lights visibility
+class Global_OT_Lights(bpy.types.Operator):
+	bl_idname = "global.lights_visibility"
+	bl_label = "Global lights visibility"
+
+
+	def invoke(self, context, event):
+		if event.type == 'LEFTMOUSE' and event.ctrl:
+			
+			return {'FINISHED'}
+		return self.execute(context)
+		#return {'PASS_THROUGH'}
+
+	def execute(self, context):
+		print("Global lights visibility")
+		objs = get_all_light_objects(context)
+		context.scene.addon.lights_global_visibility ^= True 
+		env_visibility = context.scene.addon.lights_global_visibility
+		#for light objects and world environment
+		for o in objs:
+			object_hide_viewport_and_render(o, env_visibility)
+
+		if env_visibility:
+			sky(unlink_env_and_output=True)
+		else:
+			sky(link_env_and_output=True)
+		
+			
+		return {'FINISHED'}
 
 
 @persistent
@@ -935,6 +1005,8 @@ def sky(is_environment_node=False,
 		out = get_output_node()
 		if env and out:
 			ntree.links.new(out.inputs['Environment'], env.outputs['Environment'])
+			world = bpy.context.scene.world
+			world['hide_viewport'] = False
 
 	def unlink_env():
 		env = get_env_node()
@@ -944,7 +1016,10 @@ def sky(is_environment_node=False,
 			link = next((l for l in ntree.links if l.to_node == out and l.from_node == env), None)
 			if link:
 				ntree.links.remove(link)
-	
+			
+			world = bpy.context.scene.world
+			world['hide_viewport'] = True
+
 	if w := bpy.context.scene.world:
 
 		ntree = w.node_tree

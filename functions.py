@@ -7,15 +7,21 @@ from . import operators as Op
 
 SHADOW_CATCHER_OBJECT_TYPES = ('MESH', 'CURVE','SURFACE','META','FONT')
 
+
+
+def data_area_active(context):
+	if area := next(iter([i for i in context.screen.areas if i.type =="PROPERTIES"]), None):
+		area.spaces.active.context = "DATA"
+
 def node_dome_find(nodes):
 	for i in nodes:
 		if i.vray_plugin == "LightDome":
 			return i
 	return None
+
 def object_hide_viewport_and_render(o, true_false: bool):
 	o.hide_viewport = not true_false
 	o.hide_render = not true_false
-
 
 def get_object_materials(o):
 	return list(OrderedDict.fromkeys(o.data.materials))
@@ -24,12 +30,10 @@ def get_object_materials(o):
 def is_VRay_node(n):
 	return hasattr(n, "vray_plugin")
 
-
 def materials_get(o):
 
 	mats = list(OrderedDict.fromkeys(o.data.materials))
 	return mats if mats != [None] else None
-
 
 def node_if_reroute_has_connect(node):
 	
