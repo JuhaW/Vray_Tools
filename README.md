@@ -1,2 +1,2 @@
 
-![Alt](info.drawio.png)
+![Alt](readme.drawio.svg)
