@@ -1,2 +1,2 @@
 
-![Alt](svg/animated.drawio.svg)
+![Alt](readme.svg)
