@@ -1,2 +1,2 @@
 
-![Alt](readme.svg?sanitize=true)
+![Alt](readme.svg)

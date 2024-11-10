@@ -142,6 +142,10 @@ class Vray_Lights_PT_Panel(bpy.types.Panel):
 		
 		#GI 
 		row.prop(context.scene.vray.SettingsGI, "on",text="",icon_value=icons.CUSTOM_ICONS["GI"].icon_id )#icon="MOD_SOFT")
+		#lock
+		if context.scene.addon.lights_global_lock:
+			row.alert = True
+		row.operator("global.lights_unlock", text="Unlock", icon="VIEW_UNLOCKED")
 		row = layout.row(align=True)
 		#row.scale_x = 1
 		#row.separator(factor=1,type='AUTO')
@@ -650,10 +654,20 @@ class Lights_OT_Hide_Show(bpy.types.Operator):
 			for o in coll.objects:
 				if o.get("lock", False):
 					coll["lock"] = True
+					#set global lock also for UI
+					#context.scene.addon.lights_global_lock = True
 					break
 			else:
 				coll["lock"] = False
-			
+			#check if all collections are unlocked, if so, set global lock to false
+			colls = get_collections_which_have_light_objects()
+			for coll in colls:
+				if coll.get("lock", False):
+					context.scene.addon.lights_global_lock = True
+					break
+			else:
+				context.scene.addon.lights_global_lock = False
+
 		elif event.type == 'LEFTMOUSE' and event.alt:
 			print("Leftclick+ alt")
 			self.solo(context)
@@ -901,7 +915,7 @@ class Solo_OT_Mode(bpy.types.Operator):
 """
 #======
 #Global lights visibility
-class Global_OT_Lights(bpy.types.Operator):
+class Global_OT_Lights_Visibility(bpy.types.Operator):
 	bl_idname = "global.lights_visibility"
 	bl_label = "Global lights visibility"
 
@@ -928,6 +942,33 @@ class Global_OT_Lights(bpy.types.Operator):
 			sky(link_env_and_output=True)
 		
 			
+		return {'FINISHED'}
+
+
+#======
+#Global lights unlock
+class Global_OT_Lights_Unlock(bpy.types.Operator):
+	bl_idname = "global.lights_unlock"
+	bl_label = "Global lights visibility"
+
+
+	def invoke(self, context, event):
+		if event.type == 'LEFTMOUSE' and event.ctrl:
+			
+			return {'FINISHED'}
+		return self.execute(context)
+		#return {'PASS_THROUGH'}
+
+	def execute(self, context):
+		print("Global lights unlock")
+		#set collections and light objects lock to False
+		colls = get_collections_which_have_light_objects()
+		for coll in colls:
+			coll["lock"] = False
+			for o in coll.objects:
+				o['lock'] = False	
+
+		context.scene.addon.lights_global_lock = False
 		return {'FINISHED'}
 
 
